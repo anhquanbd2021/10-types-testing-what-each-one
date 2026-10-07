@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Guide to the Failure-Class Board — what each of the 10 test types catches and what it can't see.">
+<title>Failure-Class Board Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:wght@400;500;700&family=Inter:wght@100..900&display=swap">
+<link rel="stylesheet" href="/styles.css">
+<!-- pb-shell --><link rel="stylesheet" href="./pb-shell.css"><!-- pb-shell --><!-- pb-back --><link rel="stylesheet" href="./pb-back.css"><!-- pb-back --></head>
+<body>
+<main>
+  <nav aria-label="Primary"><a href="/">Lab</a><a aria-current="page" href="/guide.html">Guide</a><a href="https://github.com/anhquanbd2021/10-types-testing-what-each-one">Source</a></nav>
+
+  <header class="guide-intro">
+    <p class="eyebrow">Type-by-type guide</p>
+    <h1>10 types, 10 failure classes</h1>
+    <p class="lede">Each card on the board runs a real check against the seeded shop. This page maps every card to the one fault only it can see — and to what all nine other cards are blind to.</p>
+    <p class="warning"><strong>Honest limits.</strong> The seeded faults are deliberately clean, one per class. Real bugs hide in the overlap — that's why the map matters more than the count.</p>
+  </header>
+
+  <section class="panel">
+    <p class="eyebrow">Start here</p>
+    <h2>What this demo proves</h2>
+    <p>Run all ten cards on the seeded build: every card fails on exactly its own failure class and passes over the other nine. Then flip the suite toggle to <em>strong</em> — the mutation card is the only one whose verdict changes, because its subject is the suite itself, not the app.</p>
+    <p><a class="try" href="/">Open the board</a></p>
+  </section>
+
+  <section class="guide-section">
+    <p class="eyebrow">The ten</p>
+    <h2>Cards and their blind spots</h2>
+    <div class="control-grid">
+      <article class="panel control"><span class="control-number">Type 01</span><h3>Unit</h3><p>Exact-value asserts on pure functions. Catches the <code>&gt;</code>-for-<code>&gt;=</code> boundary flip in <code>shippingFee(100)</code>.</p><dl><dt>Blind to</dt><dd>anything that only exists between functions — mocks hide it.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 02</span><h3>Integration</h3><p>Wires real services together — no mocks. Catches <code>addToCart</code> writing <code>basket</code> while <code>checkout</code> reads <code>cart</code>.</p><dl><dt>Blind to</dt><dd>what users experience across screens; the parts work, the journey breaks.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 03</span><h3>E2E</h3><p>Drives the composed flow — signup → pay → confirm. Catches the page that reads <code>confirmationId</code> when payment stored <code>orderId</code>.</p><dl><dt>Blind to</dt><dd>load, drift, and markup changes that keep the flow working.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 04</span><h3>Snapshot</h3><p>Diffs rendered markup against a recorded baseline. Catches <code>badge-success</code> renamed to <code>badge-ok</code>.</p><dl><dt>Blind to</dt><dd>logic — a snapshot can't tell right output from wrong output.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 05</span><h3>Contract</h3><p>Compares the keys the consumer reads against the payload the provider actually sends. Catches <code>totalCents</code> → <code>total_cents</code>.</p><dl><dt>Blind to</dt><dd>everything inside each service — shape drift is its whole world.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 06</span><h3>Load</h3><p>Counts work at scale: 200 products × 400 queries. Catches the O(n×m) scan that was instant at 20 items.</p><dl><dt>Blind to</dt><dd>correctness — a fast wrong answer passes every time.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 07</span><h3>Chaos</h3><p>Kills the dependency mid-call. Catches the recommendations call with no timeout and no fallback — the request hangs forever.</p><dl><dt>Blind to</dt><dd>failures that need a healthy dependency to exist.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 08</span><h3>Mutation</h3><p>The meta-type. Runs real mutants (<code>&gt;=</code>→<code>&gt;</code>, doubled fee, skipped discount) against the suite and counts survivors.</p><dl><dt>Blind to</dt><dd>the app — its subject is the tests themselves.</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 09</span><h3>Smoke</h3><p>Cold-boots the app and pings health. Catches the throw at module init — unit tests import functions and never boot.</p><dl><dt>Blind to</dt><dd>every behavior; it only asks "does it start?"</dd></dl></article>
+      <article class="panel control"><span class="control-number">Type 10</span><h3>Regression</h3><p>The pinned test written when incident #4821 was fixed. Catches <code>cartTotal([])</code> returning NaN — again.</p><dl><dt>Blind to</dt><dd>new bugs — it only guards failures that already happened.</dd></dl></article>
+    </div>
+  </section>
+
+  <section class="guide-section">
+    <p class="eyebrow">Architecture</p>
+    <h2>How the demo is built</h2>
+    <div class="table-wrap panel" tabindex="0" role="region" aria-label="Architecture table — layer, behavior, evidence">
+      <table>
+        <thead><tr><th>Layer</th><th>Behavior</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>Shop</td><td>A tiny checkout app with ten seedable faults — one per failure class.</td><td><code>public/shop.mjs</code></td></tr>
+          <tr><td>Runners</td><td>Ten test-type checks that really exercise the shop and return caught bug ids.</td><td><code>public/testtypes.mjs</code></td></tr>
+          <tr><td>Mutants</td><td>Single-fault shop variants; a survived mutant proves the suite can't see.</td><td><code>public/mutants.mjs</code></td></tr>
+          <tr><td>Suites</td><td>The weak shipped suite vs. a strong exact-value suite.</td><td><code>public/suites.mjs</code></td></tr>
+          <tr><td>Server</td><td>Zero-dependency static host plus /health and /version.</td><td><code>app/server.js</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="guide-section">
+    <p class="eyebrow">Run locally</p>
+    <h2>Inspect the evidence</h2>
+    <pre class="code-block">npm test         # bug manifestation + runner matrix + server
+npm run board    # CLI: 10 types × 10 bugs caught/missed matrix
+npm run check    # both
+npm start        # serve the lab on :3000</pre>
+    <p>Try <code>node scripts/board.mjs --fixed</code> to watch every card go green — same suite count, different map.</p>
+  </section>
+
+  <section class="guide-section panel">
+    <p class="eyebrow">Limits</p>
+    <h2>What this demo does not claim</h2>
+    <ul>
+      <li>Seeded faults are clean and orthogonal; real bugs overlap classes.</li>
+      <li>"Load" measures operation counts, not wall-clock latency or percentiles.</li>
+      <li>"Chaos" simulates one dead dependency, not a fault-injection platform.</li>
+      <li>Three mutants demonstrate the idea; real mutation testing generates hundreds.</li>
+      <li>A pass means "this class is covered", never "the system is correct".</li>
+    </ul>
+    <p><a class="try" href="/">Return to Lab</a></p>
+  </section>
+</main>
+<!-- pb-shell --><a class="pb-shell" href="https://github.com/anhquanbd2021/10-types-testing-what-each-one" title="10-types-testing-what-each-one — an Article Playbook demo (view source)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="9" height="9" rx="2" fill="#2dd4bf"/><rect x="13" y="2" width="9" height="9" rx="2" fill="#2dd4bf" opacity=".45"/><rect x="2" y="13" width="9" height="9" rx="2" fill="#2dd4bf" opacity=".45"/><rect x="13" y="13" width="9" height="9" rx="4.5" fill="#2dd4bf"/></svg><b>10-types-testing-what-each-one</b><i>DEMO</i></a><!-- pb-shell --><!-- pb-back --><a class="pb-back" id="pb-back" href="https://github.com/anhquanbd2021/10-types-testing-what-each-one" title="Back to the article — 10-types-testing-what-each-one">← Article <i>PLAYBOOK</i></a><script>(function(){var a=document.getElementById('pb-back');if(!a)return;var h=location.hostname;if(/^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(h)){a.href='//'+h+':'+(/^(localhost|127\.0\.0\.1)$/.test(h)?'1234':'30082')+'/microsites/article.html?slug=10-types-testing-what-each-one';}})();</script><!-- pb-back --></body>
+</html>

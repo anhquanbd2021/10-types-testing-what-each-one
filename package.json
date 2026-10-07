@@ -1,0 +1,16 @@
+{
+  "name": "failure-class-board-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Failure-Class Board — a seeded-bug shop where each of the 10 test types catches only its own failure class.",
+  "scripts": {
+    "start": "node app/server.js",
+    "board": "node scripts/board.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "check": "npm test && npm run board"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
